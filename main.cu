@@ -32,16 +32,16 @@
                #call, cudaGetErrorString(status));      \
     } while(0)
 
-#define NCCL_CHECK(cmd)                                   \
-    do {                                                  \
-        ncclResult_t status = cmd;                        \
-        ASSERT(status == ncclSuccess,                     \
-               "FAIL: nccl-call='%s'. Reason:%s\n",       \
-               #call, ncclGetErrorString(r));             \
+#define NCCL_CHECK(call)                                   \
+    do {                                                   \
+        ncclResult_t status = call;                        \
+        ASSERT(status == ncclSuccess,                      \
+               "FAIL: nccl-call='%s'. Reason:%s\n",        \
+               #call, ncclGetErrorString(status));         \
     } while(0)
 
 bool isPo2(int in) {
-    return (in > 1) && (in & in-1);
+    return (in > 1) && !(in & in-1);
 }
 
 void printHelp() {
@@ -69,15 +69,21 @@ int main(int argc, char** argv) {
             ASSERT(false, "Incorrect argument '%s'!", argv[i]);
         }
     }
+    // nccl communication handle setup
     ncclComm_t* comms = new ncclComm_t[nDevices];
+    // list of all device IDs involved in nccl communication
     int* devs = new int[nDevices];
     for(int i=0;i<nDevices;++i) {
         devs[i] = i;
     }
+    // different streams for concurrent processing
     cudaStream_t* streams = new cudaStream_t[nDevices];
+    // buffers for in/out
     int** sendbuff = new int*[nDevices];
     int** recvbuff = new int*[nDevices];
+    // events for timing the nccl allreduce function call
     cudaEvent_t* events = new cudaEvent_t[2*nDevices];
+    // buffer allocation and management
     for(int i=0;i<nDevices;++i) {
         CUDA_CHECK(cudaSetDevice(i));
         CUDA_CHECK(cudaMalloc(sendbuff+i, size*sizeof(int)));
@@ -88,17 +94,21 @@ int main(int argc, char** argv) {
         CUDA_CHECK(cudaEventCreate(events+2*i));
         CUDA_CHECK(cudaEventCreate(events+2*i+1));
     }
+    // initializing nccl for the current process
     NCCL_CHECK(ncclCommInitAll(comms, nDevices, devs));
+    // timing code
     for(int i=0;i<nDevices;++i) {
         CUDA_CHECK(cudaSetDevice(i));
         CUDA_CHECK(cudaEventRecord(events[2*i], streams[i]));
     }
+    // actual communication
     NCCL_CHECK(ncclGroupStart());
     for(int i=0;i<nDevices;++i) {
         NCCL_CHECK(ncclAllReduce((const void*)sendbuff[i], (void*)recvbuff[i],
                                  size, ncclInt, ncclSum, comms[i], streams[i]));
     }
     NCCL_CHECK(ncclGroupEnd());
+    // timing code
     for(int i=0;i<nDevices;++i) {
         CUDA_CHECK(cudaSetDevice(i));
         CUDA_CHECK(cudaEventRecord(events[2*i+1], streams[i]));
@@ -114,6 +124,7 @@ int main(int argc, char** argv) {
         CUDA_CHECK(cudaEventElapsedTime(&et, events[2*i], events[2*i+1]));
         printf("Device=%d,nDevices=%d,size=%d,time=%fms\n", i, nDevices, size, et);
     }
+    // cleanup
     for(int i=0;i<nDevices;++i) {
         CUDA_CHECK(cudaSetDevice(i));
         CUDA_CHECK(cudaFree(recvbuff[i]));
@@ -122,9 +133,11 @@ int main(int argc, char** argv) {
         CUDA_CHECK(cudaEventDestroy(events[2*i+1]));
         CUDA_CHECK(cudaStreamDestroy(streams[i]));
     }
+    // remove all the nccl communication channels
     for(int i=0;i<nDevices;++i) {
         NCCL_CHECK(ncclCommDestroy(comms[i]));
     }
+    // cpu cleanup
     delete [] events;
     delete [] recvbuff;
     delete [] sendbuff;

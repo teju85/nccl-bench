@@ -1,1 +1,4 @@
 nccl
+core
+*.o
+*.exe

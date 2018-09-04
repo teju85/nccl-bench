@@ -8,16 +8,21 @@ communications, especially using AllReduce primitives given by nccl library.
 =Pre-requisites
 https://github.com/teju85/dockerfiles#pre-reqs
 
-=Running
+=Setting up container
+This should be a one-time thing, in a given machine.
 ```bash
-git clone https://github.com/teju85/nccl-bench
 git clone https://github.com/teju85/dockerfiles
 cd dockerfiles/ubuntu1604
 make nccl-bench
 cd ../..
+```
+
+=Running the bench
+```bash
+git clone https://github.com/teju85/nccl-bench
 ./dockerfiles/scripts/launch -runas user nccl-bench:latest /bin/bash
-container$ cd /work/nccl-bench
-container$ make
+inside-container$ cd /work/nccl-bench
+inside-container$ make
 ```
 
 =TODO

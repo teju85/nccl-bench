@@ -6,12 +6,12 @@ SIZES   ?= 256 1024 4096 16384 65536 262144 1048576 4194304 16777216 67108864
 default: build
 	for nDevices in $(DEVICES); do \
 	    for size in $(SIZES); do \
-	        ./nccl -n $nDevices -s $size; \
+	        ./nccl -n $$nDevices -s $$size; \
 	    done \
 	done
 
 build:
-	nvcc -arch=$(ARCH) -o nccl main.cu
+	nvcc -arch=sm_$(ARCH) -o nccl main.cu -lnccl
 
 clean:
 	rm -f nccl

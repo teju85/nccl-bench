@@ -20,7 +20,7 @@ cd ../..
 # Running the bench
 ```bash
 git clone https://github.com/teju85/nccl-bench
-./dockerfiles/scripts/launch -runas user nccl-bench:latest /bin/bash
+./dockerfiles/scripts/launch -runas user nccl:bench /bin/bash
 inside-container$ cd /work/nccl-bench
 inside-container$ make
 ```

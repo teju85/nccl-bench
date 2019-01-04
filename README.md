@@ -8,7 +8,7 @@ communications, especially using AllReduce primitives given by nccl library.
 # Pre-requisites
 https://github.com/teju85/dockerfiles#pre-reqs
 
-# Setting up container
+# Setting up benchmark
 This should be a one-time thing, in a given machine.
 ```bash
 git clone https://github.com/teju85/dockerfiles
@@ -16,14 +16,10 @@ cd dockerfiles/ubuntu1604
 make nccl-bench
 cd ../..
 ```
+This container should have the git repo also built-inside it!
 
 # Running the bench
 ```bash
-git clone https://github.com/teju85/nccl-bench
 ./dockerfiles/scripts/launch -runas user nccl:bench /bin/bash
-inside-container$ cd /work/nccl-bench
-inside-container$ make
+inside-container$ /opt/nccl-bench/nccl -h
 ```
-
-# TODO
-* Support one-device-per-process benchmarking

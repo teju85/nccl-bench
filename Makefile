@@ -1,17 +1,21 @@
 # Assumes that one is running on a DGX1-box!
 ARCH    ?= 70
-DEVICES ?= 2 4 8
-SIZES   ?= 256 1024 4096 16384 65536 262144 1048576 4194304 16777216 67108864
 
-default: build
-	for nDevices in $(DEVICES); do \
-	    for size in $(SIZES); do \
-	        ./nccl -n $$nDevices -s $$size; \
-	    done \
-	done
+EXE     := nccl
+GENCODE := $(foreach a,$(ARCH),-gencode arch=compute_$(a),code=sm_$(a) -arch=sm_$(a))
+LIBS    := -lnccl
+FLAGS   := $(GENCODE) -std=c++11 -ccbin mpiCC
+
+default:
+	@echo "make what? Available targets are:"
+	@echo "  . build  - builds the executable"
+	@echo "  . clean  - cleans the built files"
+	@echo "Variables that customize build behavior are:"
+	@echo "  . ARCH   - space-separated list of gpu architectures to"
+	@echo "             compile for [$(ARCH)]"
 
 build:
-	nvcc -arch=sm_$(ARCH) -o nccl main.cu -lnccl
+	nvcc $(FLAGS) -o $(EXE) main.cu $(LIBS)
 
 clean:
 	rm -f nccl
